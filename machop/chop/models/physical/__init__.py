@@ -1,6 +1,6 @@
 import torch.nn as nn
 from ..utils import MaseModelInfo
-from .jet_substructure import get_jsc_toy, get_jsc_tiny, get_jsc_s
+from .jet_substructure import get_jsc_toy, get_jsc_tiny, get_jsc_s, get_jsc_c
 
 PHYSICAL_MODELS = {
     "jsc-toy": {
@@ -33,6 +33,16 @@ PHYSICAL_MODELS = {
             is_fx_traceable=True,
         ),
     },
+    "jsc-c": {
+        "model": get_jsc_c,
+        "info": MaseModelInfo(
+            "jsc-c",
+            model_source="physical",
+            task_type="physical",
+            physical_data_point_classification=True,
+            is_fx_traceable=True,
+        ),
+    },
 }
 
 
@@ -54,3 +64,4 @@ def get_physical_model(name: str, dataset_info: dict, **kwargs) -> nn.Module:
 
 def get_physical_model_cls(name: str) -> nn.Module:
     raise NotImplementedError
+
