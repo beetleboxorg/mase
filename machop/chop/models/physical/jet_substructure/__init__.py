@@ -33,36 +33,32 @@ class JSC_C(nn.Module):
     def __init__(self, info):
         super(JSC_C, self).__init__()
         self.seq_blocks = nn.Sequential(
-            nn.Conv1d(
-                in_channels=16,
-                out_channels=32,
-                kernel_size=3,
-                stride=1,
-                padding=1,
-            ), 
-            nn.ReLU(),
-            nn.Conv1d(
-                in_channels=32, out_channels=64, kernel_size=3, stride=1, padding=1
-            ), 
-            nn.ReLU(),
-            nn.Conv1d(
-                in_channels=64, out_channels=128, kernel_size=3, stride=1, padding=1
-            ),  # 64 * 64 * 64
-            nn.ReLU()
+            # 1st LogicNets Layer
+            nn.BatchNorm1d(16),  # input_quant       # 0
+            nn.ReLU(16),  # 1
+            nn.Linear(16, 64),  # linear              # 2
+            nn.BatchNorm1d(64),  # output_quant       # 3
+            nn.ReLU(64),  # 4
+            # 2nd LogicNets Layer
+            nn.Linear(64, 128),  # 5
+            nn.BatchNorm1d(128),  # 6
+            nn.ReLU(128),  # 7
+            # 2nd LogicNets Layer
+            nn.Linear(128, 256),  # 5
+            nn.BatchNorm1d(256),  # 6
+            nn.ReLU(256),  # 7
+            # 2nd LogicNets Layer
+            nn.Linear(256, 512),  # 5
+            nn.BatchNorm1d(512),  # 6
+            nn.ReLU(512),  # 7
+            # 3rd LogicNets Layer
+            nn.Linear(512, 5),  # 8
+            nn.BatchNorm1d(5),  # 9
+            nn.ReLU(5),
         )
-        self.fc=nn.Sequential(nn.Linear(128, 5),
-        nn.ReLU(5))
-        
-        
 
     def forward(self, x):
-        x = x.view(x.shape[0],x.shape[1], 1)
-        x = self.seq_blocks(x)
-        x = x.view(x.shape[0],x.shape[1])
-        x = self.fc(x)
-        return x
-
-
+        return self.seq_blocks(x)
 
 
 
