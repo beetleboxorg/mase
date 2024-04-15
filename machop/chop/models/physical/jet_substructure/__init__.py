@@ -35,22 +35,22 @@ class JSC_C(nn.Module):
         self.seq_blocks = nn.Sequential(
             nn.Conv1d(
                 in_channels=16,
-                out_channels=16,
+                out_channels=32,
                 kernel_size=3,
                 stride=1,
                 padding=1,
             ), 
             nn.ReLU(),
             nn.Conv1d(
-                in_channels=16, out_channels=32, kernel_size=3, stride=1, padding=1
+                in_channels=32, out_channels=64, kernel_size=3, stride=1, padding=1
             ), 
             nn.ReLU(),
             nn.Conv1d(
-                in_channels=32, out_channels=32, kernel_size=3, stride=1, padding=1
+                in_channels=64, out_channels=128, kernel_size=3, stride=1, padding=1
             ),  # 64 * 64 * 64
             nn.ReLU()
         )
-        self.fc=nn.Sequential(nn.Linear(32, 5),
+        self.fc=nn.Sequential(nn.Linear(128, 5),
         nn.ReLU(5))
         
         
@@ -134,5 +134,3 @@ def get_jsc_s(info):
 
 def get_jsc_c(info):
     return JSC_C(info)
-
-
