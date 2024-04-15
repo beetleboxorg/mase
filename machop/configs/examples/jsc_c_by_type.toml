@@ -1,5 +1,5 @@
 # basics
-model = "jsc-tiny"
+model = "jsc-c"
 dataset = "jsc"
 task = "cls"
 
