@@ -227,13 +227,13 @@ class SearchStrategyOptuna(SearchStrategyBase):
                     beautified[k] = txt
             return beautified
 
-        df_truncated.loc[
-            :, ["software_metrics", "hardware_metrics", "scaled_metrics"]
-        ] = df_truncated.loc[
-            :, ["software_metrics", "hardware_metrics", "scaled_metrics"]
-        ].map(
-            beautify_metric
-        )
+        #df_truncated.loc[
+        #    :, ["software_metrics", "hardware_metrics", "scaled_metrics"]
+        #] = df_truncated.loc[
+         #   :, ["software_metrics", "hardware_metrics", "scaled_metrics"]
+        #].map(
+         #   beautify_metric
+        #)
         txt += tabulate(
             df_truncated,
             headers="keys",
