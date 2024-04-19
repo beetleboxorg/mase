@@ -6,6 +6,7 @@ from .base import SearchStrategyBase
 SEARCH_STRATEGY_MAP = {
     # "rl": StrategyRL,
     "optuna": SearchStrategyOptuna,
+    "brute_force": SearchStrategyBruteForce
 }
 
 
