@@ -41,6 +41,29 @@ class SearchStrategyBruteForce(SearchStrategyBase):
       in_frac_widths=search_space.get(frac_width_string)
     return(in_frac_widths)
 
+  def compute_software_metrics(self, model, sampled_config: dict, is_eval_mode: bool):
+    # note that model can be mase_graph or nn.Module
+    metrics = {}
+    if is_eval_mode:
+        with torch.no_grad():
+            for runner in self.sw_runner:
+                metrics |= runner(self.data_module, model, sampled_config)
+    else:
+        for runner in self.sw_runner:
+            metrics |= runner(self.data_module, model, sampled_config)
+    return metrics
+
+  def compute_hardware_metrics(self, model, sampled_config, is_eval_mode: bool):
+    metrics = {}
+    if is_eval_mode:
+        with torch.no_grad():
+            for runner in self.hw_runner:
+                metrics |= runner(self.data_module, model, sampled_config)
+    else:
+        for runner in self.hw_runner:
+            metrics |= runner(self.data_module, model, sampled_config)
+    return metrics
+
   def search(self, search_space):
     pass_args = {
     "by": "type",
