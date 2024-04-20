@@ -1,6 +1,8 @@
 import torch
 import pandas as pd
 import logging
+import copy
+
 from tabulate import tabulate
 import joblib
 from torchmetrics.classification import MulticlassAccuracy
@@ -8,6 +10,11 @@ from chop.passes.graph.analysis.quantization import calculate_avg_bits_mg_analys
 from chop.passes.graph.transforms import (
     quantize_transform_pass,
     summarize_quantization_analysis_pass,
+)
+from chop.passes.graph import (
+    add_common_metadata_analysis_pass,
+    init_metadata_analysis_pass,
+    add_software_metadata_analysis_pass,
 )
 
 from functools import partial
@@ -21,19 +28,56 @@ class SearchStrategyBruteForce(SearchStrategyBase):
   def _post_init_setup(self):
     pass
 
+
+  def get_in_frac_widths(self,data_type, search_space):
+    frac_width_string="%s_frac_width" % data_type
+    width_string="%s_width" % data_type
+
+    if search_space.get(frac_width_string)==[None]:
+      in_frac_widths=[]
+      for in_width_sample in search_space.get(width_string):
+        in_frac_widths.append((in_width_sample, in_width_sample//2))
+    else:
+      in_frac_widths=search_space.get(frac_width_string)
+    return(in_frac_widths)
+
   def search(self, search_space):
-    print(search_space)
-    print(search_space.config.get("seed"))
+    pass_args = {
+    "by": "type",
+    "default": {"config": {"name": None}},
+    "linear": {
+            "config": {
+                "name": "integer",
+                # data
+                "data_in_width": 0,
+                "data_in_frac_width": 0,
+                # weight
+                "weight_width": 0,
+                "weight_frac_width": 0,
+                # bias
+                "bias_width": 0,
+                "bias_frac_width": 0,
+            }
+    },}
+    seed=search_space.config.get("seed")
+    linear_search_space=seed.get("linear").get('config')
+    data_in_frac_widths=self.get_in_frac_widths('data_in', linear_search_space)
+    weight_frac_widths=self.get_in_frac_widths('weight', linear_search_space)
+    bias_frac_widths=self.get_in_frac_widths('weight', linear_search_space)
+
     search_spaces = []
     for d_config in data_in_frac_widths:
-        for w_config in w_in_frac_widths:
-            pass_args['linear']['config']['data_in_width'] = d_config[0]
-            pass_args['linear']['config']['data_in_frac_width'] = d_config[1]
-            pass_args['linear']['config']['weight_width'] = w_config[0]
-            pass_args['linear']['config']['weight_frac_width'] = w_config[1]
-            # dict.copy() and dict(dict) only perform shallow copies
-            # in fact, only primitive data types in python are doing implicit copy when a = b happens
-            search_spaces.append(copy.deepcopy(pass_args))
+        for w_config in weight_frac_widths:
+          for b_config in bias_frac_widths:
+             pass_args['linear']['config']['data_in_width'] = d_config[0]
+             pass_args['linear']['config']['data_in_frac_width'] = d_config[1]
+             pass_args['linear']['config']['weight_width'] = w_config[0]
+             pass_args['linear']['config']['weight_frac_width'] = w_config[1]
+             pass_args['linear']['config']['bias_width'] = b_config[0]
+             pass_args['linear']['config']['bias_frac_width'] = b_config[1]
+             # dict.copy() and dict(dict) only perform shallow copies
+             # in fact, only primitive data types in python are doing implicit copy when a = b happens
+             search_spaces.append(copy.deepcopy(pass_args))
     mg, _ = init_metadata_analysis_pass(mg, None)
     mg, _ = add_common_metadata_analysis_pass(mg, {"dummy_in": dummy_in})
     mg, _ = add_software_metadata_analysis_pass(mg, None)
@@ -41,7 +85,7 @@ class SearchStrategyBruteForce(SearchStrategyBase):
     metric = MulticlassAccuracy(num_classes=5)
     num_batchs = 5
     recorded_accs = []
-    for i, config in enumerate(search_space):
+    for i, config in enumerate(search_spaces):
         mg, _ = quantize_transform_pass(mg, config)
         j = 0
         #mg, _ = report_node_type_analysis_pass(mg)
