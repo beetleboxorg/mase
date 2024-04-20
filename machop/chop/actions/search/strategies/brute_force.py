@@ -105,10 +105,14 @@ class SearchStrategyBruteForce(SearchStrategyBase):
     is_eval_mode = self.config.get("eval_mode", True)
     model = search_space.rebuild_model(sampled_config, is_eval_mode)
       
-    software_metrics = self.compute_software_metrics(
-        model, sampled_config, is_eval_mode
-    )
-    mg, _ = init_metadata_analysis_pass(mg, None)
+    for i, config in enumerate(search_spaces):
+        print(config)
+        software_metrics = self.compute_software_metrics(
+            model, config, is_eval_mode
+        )
+        print(software_metrics)
+
+   ''' mg, _ = init_metadata_analysis_pass(mg, None)
     mg, _ = add_common_metadata_analysis_pass(mg, {"dummy_in": dummy_in})
     mg, _ = add_software_metadata_analysis_pass(mg, None)
 
@@ -137,4 +141,4 @@ class SearchStrategyBruteForce(SearchStrategyBase):
         acc_avg = sum(accs) / len(accs)
         loss_avg = sum(losses) / len(losses)
         recorded_accs.append([acc_avg, info.get('data_avg_bit'), info.get('w_avg_bit')])
-        return(recorded_accs)
+        return(recorded_accs)'''
