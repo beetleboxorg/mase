@@ -105,6 +105,7 @@ class SearchStrategyOptuna(SearchStrategyBase):
             scaled_metrics[metric_name] = (
                 self.config["metrics"][metric_name]["scale"] * metrics[metric_name]
             )
+        print(scaled_metrics)
 
         trial.set_user_attr("software_metrics", software_metrics)
         trial.set_user_attr("hardware_metrics", hardware_metrics)

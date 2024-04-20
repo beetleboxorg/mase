@@ -26,8 +26,14 @@ logger = logging.getLogger(__name__)
 
 class SearchStrategyBruteForce(SearchStrategyBase):
   def _post_init_setup(self):
-    pass
-
+    self.sum_scaled_metrics = self.config["setup"]["sum_scaled_metrics"]
+    self.metric_names = list(sorted(self.config["metrics"].keys()))
+    if not self.sum_scaled_metrics:
+        self.directions = [
+            self.config["metrics"][k]["direction"] for k in self.metric_names
+        ]
+    else:
+        self.direction = self.config["setup"]["direction"]
 
   def get_in_frac_widths(self,data_type, search_space):
     frac_width_string="%s_frac_width" % data_type
@@ -63,6 +69,65 @@ class SearchStrategyBruteForce(SearchStrategyBase):
         for runner in self.hw_runner:
             metrics |= runner(self.data_module, model, sampled_config)
     return metrics
+
+  def save_the_best(self, best_trial, save_path):
+      df = pd.DataFrame(
+          columns=[
+              "number",
+              "value",
+              "software_metrics",
+              "hardware_metrics",
+              "scaled_metrics",
+              "sampled_config",
+          ]
+      )
+      best_trial = best_trial
+      row = [
+          best_trial.get('best_number'),
+          best_trial.get('best_value'),
+          best_trial.get('best_software_metrics'),
+          best_trial.get('best_hardware_metrics'),
+          best_trial.get('best_scaled_metrics'),
+          best_trial.get('best_sampled_config'),
+      ]
+      df.loc[len(df)] = row
+      df.to_json(save_path, orient="index", indent=4)
+
+      txt = "Best trial(s):\n"
+      df_truncated = df.loc[
+          :, ["number", "software_metrics", "hardware_metrics", "scaled_metrics"]
+      ]
+
+      def beautify_metric(metric: dict):
+          beautified = {}
+          for k, v in metric.items():
+              if isinstance(v, (float, int)):
+                  beautified[k] = round(v, 3)
+              else:
+                  txt = str(v)
+                  if len(txt) > 20:
+                      txt = txt[:20] + "..."
+                  else:
+                      txt = txt[:20]
+                  beautified[k] = txt
+          return beautified
+
+      #df_truncated.loc[
+      #    :, ["software_metrics", "hardware_metrics", "scaled_metrics"]
+      #] = df_truncated.loc[
+        #   :, ["software_metrics", "hardware_metrics", "scaled_metrics"]
+      #].map(
+        #   beautify_metric
+      #)
+      txt += tabulate(
+          df_truncated,
+          headers="keys",
+          tablefmt="orgtbl",
+      )
+      logger.info(f"Best trial(s):\n{txt}")
+      return df
+
+
 
   def search(self, search_space):
     pass_args = {
@@ -103,42 +168,43 @@ class SearchStrategyBruteForce(SearchStrategyBase):
              search_spaces.append(copy.deepcopy(pass_args))
               
     is_eval_mode = self.config.get("eval_mode", True)
-    model = search_space.rebuild_model(sampled_config, is_eval_mode)
-      
-    for i, config in enumerate(search_spaces):
-        print(config)
+    best_ratio=0
+    for i, sample_config in enumerate(search_spaces):
+        model = search_space.rebuild_model(sample_config, is_eval_mode)
         software_metrics = self.compute_software_metrics(
-            model, config, is_eval_mode
+            model, sample_config, is_eval_mode
         )
-        print(software_metrics)
+        hardware_metrics = self.compute_hardware_metrics(
+            model, sample_config, is_eval_mode
+        )
+        metrics = software_metrics | hardware_metrics
+        scaled_metrics = {}
+        for metric_name in self.metric_names:
+            scaled_metrics[metric_name] = (
+                self.config["metrics"][metric_name]["scale"] * metrics[metric_name]
+            )
+        self.visualizer.log_metrics(metrics=scaled_metrics, step=i)
 
-   ''' mg, _ = init_metadata_analysis_pass(mg, None)
-    mg, _ = add_common_metadata_analysis_pass(mg, {"dummy_in": dummy_in})
-    mg, _ = add_software_metadata_analysis_pass(mg, None)
+        if not self.sum_scaled_metrics:
+            list(scaled_metrics.values())
+        else:
+            sum(scaled_metrics.values())
+        ratio=scaled_metrics.get('accuracy')/scaled_metrics.get('average_bitwidth')
+        scaled_metrics.update({'ratio': ratio})
+        #Compare to previous best
+        if ratio>best_ratio:
+          best_trial={
+            'best_number':i,
+            'best_value': [scaled_metrics.get('accuracy'),
+                          scaled_metrics.get('average_bitwidth')],
+            'best_software_metrics':software_metrics,
+            'best_hardware_metrics':hardware_metrics,
+            'best_scaled_metrics':scaled_metrics,
+            'best_sampled_config':sample_config,
 
-    metric = MulticlassAccuracy(num_classes=5)
-    num_batchs = 5
-    recorded_accs = []
-    for i, config in enumerate(search_spaces):
-        mg, _ = quantize_transform_pass(mg, config)
-        j = 0
-        #mg, _ = report_node_type_analysis_pass(mg)
-        mg, info = calculate_avg_bits_mg_analysis_pass(mg, pass_args)
-        #mg, _ = report_node_meta_param_analysis_pass(mg, {"which": ("all",)})
-        # this is the inner loop, where we also call it as a runner.
-        acc_avg, loss_avg = 0, 0
-        accs, losses = [], []
-        for inputs in data_module.train_dataloader():
-            xs, ys = inputs
-            preds = mg.model(xs)
-            loss = torch.nn.functional.cross_entropy(preds, ys)
-            acc = metric(preds, ys)
-            accs.append(acc)
-            losses.append(loss)
-            if j > num_batchs:
-                break
-            j += 1
-        acc_avg = sum(accs) / len(accs)
-        loss_avg = sum(losses) / len(losses)
-        recorded_accs.append([acc_avg, info.get('data_avg_bit'), info.get('w_avg_bit')])
-        return(recorded_accs)'''
+          }
+          best_model=model
+          best_ratio=ratio
+    self.save_the_best(best_trial, self.save_dir / "best.json")
+
+ 
