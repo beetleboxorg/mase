@@ -101,6 +101,13 @@ class SearchStrategyBruteForce(SearchStrategyBase):
              # dict.copy() and dict(dict) only perform shallow copies
              # in fact, only primitive data types in python are doing implicit copy when a = b happens
              search_spaces.append(copy.deepcopy(pass_args))
+              
+    is_eval_mode = self.config.get("eval_mode", True)
+    model = search_space.rebuild_model(sampled_config, is_eval_mode)
+      
+    software_metrics = self.compute_software_metrics(
+        model, sampled_config, is_eval_mode
+    )
     mg, _ = init_metadata_analysis_pass(mg, None)
     mg, _ = add_common_metadata_analysis_pass(mg, {"dummy_in": dummy_in})
     mg, _ = add_software_metadata_analysis_pass(mg, None)
