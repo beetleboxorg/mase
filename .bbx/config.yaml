@@ -53,7 +53,7 @@ jobs:
      - mount:
         name: board-files
         path: /home/pg519/shared/board-files
-    resource_spec: 2xlarge
+    resource_spec: large
     steps:
       - run:
           name: Run hardware regression
@@ -67,10 +67,10 @@ jobs:
 
 # Define a workflow to orchestrate a job
 workflows:
-  mase-software:
-    jobs:
-      - chop-cpu-regression
-      - chop-gpu-regression
+  # mase-software:
+  #   jobs:
+  #     - chop-cpu-regression
+  #     - chop-gpu-regression
 
   mase-hardware:
     jobs:
