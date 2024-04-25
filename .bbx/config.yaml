@@ -34,7 +34,7 @@ jobs:
 
   hw-regression:
     runner: ubuntu-runner
-    resource_spec: large
+    resource_spec: micro
     steps:
       - run:
           name: Run hardware regression
